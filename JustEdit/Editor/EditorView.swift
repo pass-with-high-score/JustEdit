@@ -117,6 +117,15 @@ struct EditorView: View {
     @ViewBuilder
     private var editorSettingsMenu: some View {
         Menu {
+            // Share file
+            Button {
+                viewModel.showShareSheet = true
+            } label: {
+                Label("Share File", systemImage: "square.and.arrow.up")
+            }
+
+            Divider()
+
             // Line numbers toggle
             Button {
                 withAnimation(AppTheme.quickAnimation) {

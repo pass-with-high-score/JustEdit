@@ -8,6 +8,7 @@ struct DocumentBrowserView: View {
     @State private var documentToRename: DocumentInfo?
     @State private var renameText: String = ""
     @State private var showRenameAlert = false
+    @State private var showImportPicker = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -51,7 +52,17 @@ struct DocumentBrowserView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     sortMenu
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    // Open from Files app
+                    Button {
+                        showImportPicker = true
+                    } label: {
+                        Image(systemName: "folder")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.textSecondary(colorScheme))
+                    }
+
+                    // Create new
                     Button {
                         viewModel.showCreateSheet = true
                     } label: {
@@ -77,9 +88,45 @@ struct DocumentBrowserView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showImportPicker) {
+                DocumentImportPicker { importedURL in
+                    importFile(from: importedURL)
+                }
+            }
             .refreshable {
                 viewModel.loadDocuments()
             }
+        }
+    }
+
+    // MARK: - Import File from Files App
+
+    private func importFile(from sourceURL: URL) {
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let fileName = sourceURL.lastPathComponent
+        let destURL = documentsDir.appendingPathComponent(fileName)
+
+        do {
+            // If file already exists, generate unique name
+            var finalURL = destURL
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                let name = destURL.deletingPathExtension().lastPathComponent
+                let ext = destURL.pathExtension
+                var counter = 1
+                repeat {
+                    finalURL = documentsDir.appendingPathComponent("\(name) \(counter).\(ext)")
+                    counter += 1
+                } while FileManager.default.fileExists(atPath: finalURL.path)
+            }
+
+            try FileManager.default.copyItem(at: sourceURL, to: finalURL)
+            viewModel.loadDocuments()
+
+            // Open the imported file
+            let info = DocumentInfo(url: finalURL)
+            selectedDocument = info
+        } catch {
+            print("Failed to import file: \(error)")
         }
     }
 
@@ -220,6 +267,8 @@ struct EditorContainerView: View {
                 EditorView(viewModel: viewModel)
             }
         }
+        .navigationTitle(viewModel?.fileName ?? "")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -235,29 +284,14 @@ struct EditorContainerView: View {
                     .foregroundColor(AppTheme.primary)
                 }
             }
-
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel?.showShareSheet ?? false },
+            set: { viewModel?.showShareSheet = $0 }
+        )) {
             if let vm = viewModel {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 1) {
-                        Text(vm.fileName)
-                            .font(.subheadline.weight(.semibold))
-                        HStack(spacing: 6) {
-                            Text("Ln \(vm.currentLine), Col \(vm.currentColumn)")
-                                .font(.caption2.monospacedDigit())
-                                .foregroundColor(AppTheme.textSecondary(colorScheme))
-                            Text("·")
-                                .font(.caption2)
-                                .foregroundColor(AppTheme.textSecondary(colorScheme))
-                            Text(vm.hasUnsavedChanges ? "Editing" : "Saved")
-                                .font(.caption2)
-                                .foregroundColor(
-                                    vm.hasUnsavedChanges
-                                        ? AppTheme.secondary
-                                        : AppTheme.textSecondary(colorScheme)
-                                )
-                        }
-                    }
-                }
+                ShareSheet(url: vm.document.fileURL)
+                    .onAppear { vm.save() }
             }
         }
         .task {

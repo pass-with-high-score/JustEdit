@@ -41,6 +41,7 @@ final class EditorViewModel {
 
     // State
     var hasUnsavedChanges: Bool = false
+    var showShareSheet: Bool = false
     var wordCount: Int = 0
     var characterCount: Int = 0
     var currentLine: Int = 1
