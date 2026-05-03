@@ -152,9 +152,24 @@ final class LineNumberTextView: UIView {
             self, selector: #selector(textDidChange),
             name: UITextView.textDidChangeNotification, object: textView
         )
+
+        // Keyboard observers
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(keyboardWillChangeFrame(_:)),
+            name: UIResponder.keyboardWillChangeFrameNotification, object: nil
+        )
     }
 
     private var textViewLeadingConstraint: NSLayoutConstraint?
+    private var baseBottomInset: CGFloat = 60
 
     private func updateTextViewLeadingConstraint() {
         textViewLeadingConstraint?.isActive = false
@@ -173,9 +188,54 @@ final class LineNumberTextView: UIView {
     private func updateTextViewInsets() {
         updateTextViewLeadingConstraint()
         if showLineNumbers {
-            textView.textContainerInset = UIEdgeInsets(top: 4, left: 4, bottom: 60, right: 12)
+            textView.textContainerInset = UIEdgeInsets(top: 4, left: 4, bottom: baseBottomInset, right: 12)
         } else {
-            textView.textContainerInset = UIEdgeInsets(top: 4, left: 12, bottom: 60, right: 12)
+            textView.textContainerInset = UIEdgeInsets(top: 4, left: 12, bottom: baseBottomInset, right: 12)
+        }
+    }
+
+    // MARK: - Keyboard Handling
+
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        adjustForKeyboard(notification)
+    }
+
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
+        UIView.animate(withDuration: duration) {
+            self.textView.contentInset.bottom = 0
+            self.textView.verticalScrollIndicatorInsets.bottom = 0
+        }
+    }
+
+    @objc private func keyboardWillChangeFrame(_ notification: Notification) {
+        adjustForKeyboard(notification)
+    }
+
+    private func adjustForKeyboard(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let window = self.window else { return }
+
+        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
+
+        // Convert keyboard frame to our coordinate space
+        let keyboardFrameInView = window.convert(keyboardFrame, to: self)
+
+        // Calculate the overlap between keyboard and our view
+        let overlap = max(0, self.bounds.maxY - keyboardFrameInView.origin.y)
+
+        UIView.animate(withDuration: duration) {
+            self.textView.contentInset.bottom = overlap
+            self.textView.verticalScrollIndicatorInsets.bottom = overlap
+        }
+
+        // Scroll to cursor position
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let selectedRange = self.textView.selectedTextRange {
+                let caretRect = self.textView.caretRect(for: selectedRange.end)
+                let visibleRect = caretRect.insetBy(dx: 0, dy: -20)
+                self.textView.scrollRectToVisible(visibleRect, animated: true)
+            }
         }
     }
 
