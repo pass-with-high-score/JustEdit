@@ -9,29 +9,9 @@ struct EditorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Editor area
-            ZStack(alignment: .leading) {
-                if viewModel.showLineNumbers {
-                    HStack(spacing: 0) {
-                        // Line number gutter
-                        LineNumberGutter(
-                            totalLines: viewModel.totalLines,
-                            currentLine: viewModel.currentLine,
-                            font: UIFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-                            colorScheme: colorScheme
-                        )
-                        .frame(width: 44)
-
-                        Divider()
-
-                        // Editor with adjusted insets
-                        RichTextEditor(viewModel: viewModel)
-                    }
-                } else {
-                    RichTextEditor(viewModel: viewModel)
-                }
-            }
-            .background(AppTheme.background(colorScheme))
+            // Editor area (line numbers built into RichTextEditor at UIKit level)
+            RichTextEditor(viewModel: viewModel)
+                .background(AppTheme.background(colorScheme))
 
             // Status bar
             statusBar
@@ -145,7 +125,7 @@ struct EditorView: View {
             } label: {
                 Label(
                     viewModel.showLineNumbers ? "Hide Line Numbers" : "Show Line Numbers",
-                    systemImage: viewModel.showLineNumbers ? "list.number" : "list.number"
+                    systemImage: "list.number"
                 )
             }
 
@@ -172,44 +152,5 @@ struct EditorView: View {
                 .font(.system(size: 16))
                 .foregroundColor(AppTheme.textSecondary(colorScheme))
         }
-    }
-}
-
-// MARK: - Line Number Gutter
-
-struct LineNumberGutter: View {
-    let totalLines: Int
-    let currentLine: Int
-    let font: UIFont
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .trailing, spacing: 0) {
-                ForEach(1...max(totalLines, 1), id: \.self) { lineNumber in
-                    Text("\(lineNumber)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(
-                            lineNumber == currentLine
-                                ? AppTheme.primary
-                                : AppTheme.textSecondary(colorScheme).opacity(0.5)
-                        )
-                        .fontWeight(lineNumber == currentLine ? .bold : .regular)
-                        .frame(height: lineHeight)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-            .padding(.top, 20) // Match UITextView textContainerInset.top
-            .padding(.trailing, 6)
-            .padding(.leading, 4)
-        }
-        .background(AppTheme.surfaceSecondary(colorScheme).opacity(0.3))
-        .scrollDisabled(true) // Synced with main text view
-    }
-
-    private var lineHeight: CGFloat {
-        // Approximate line height based on default font
-        let uiFont = UIFont.systemFont(ofSize: 16)
-        return uiFont.lineHeight + 4 // 4pt line spacing
     }
 }
