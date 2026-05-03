@@ -20,7 +20,8 @@ struct RichTextEditor: UIViewRepresentable {
         textView.spellCheckingType = .default
         textView.smartQuotesType = .default
         textView.smartDashesType = .default
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 4, bottom: 60, right: 12)
+        textView.textContainerInset = UIEdgeInsets(top: 4, left: 4, bottom: 60, right: 12)
+        textView.contentInsetAdjustmentBehavior = .never
         textView.font = AppSettings.shared.defaultUIFont
         textView.backgroundColor = .clear
         textView.tintColor = UIColor(AppTheme.primary)
@@ -172,9 +173,9 @@ final class LineNumberTextView: UIView {
     private func updateTextViewInsets() {
         updateTextViewLeadingConstraint()
         if showLineNumbers {
-            textView.textContainerInset = UIEdgeInsets(top: 8, left: 4, bottom: 60, right: 12)
+            textView.textContainerInset = UIEdgeInsets(top: 4, left: 4, bottom: 60, right: 12)
         } else {
-            textView.textContainerInset = UIEdgeInsets(top: 8, left: 12, bottom: 60, right: 12)
+            textView.textContainerInset = UIEdgeInsets(top: 4, left: 12, bottom: 60, right: 12)
         }
     }
 
